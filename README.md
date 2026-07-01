@@ -3,9 +3,34 @@
 [![CI](https://github.com/PlatformStackPulse/tf-atom-security-group-aws/actions/workflows/ci.yml/badge.svg)](https://github.com/PlatformStackPulse/tf-atom-security-group-aws/actions/workflows/ci.yml)
 ![Terraform](https://img.shields.io/badge/terraform-%3E%3D1.6.0-blueviolet)
 
-## Purpose
+Terraform atom that creates a single AWS Security Group (a VPC network firewall) with consistent, tf-label-driven naming and tagging.
 
-Terraform atom: AWS Security Group - creates a network firewall for VPC resources.
+## Features
+
+- Creates one `aws_security_group` scoped to a caller-provided `vpc_id`.
+- Names, tags, and the `Name` tag are derived from the [tf-label](https://github.com/PlatformStackPulse/tf-label) `module.this` context, so identity is consistent across the fleet.
+- Optional `description`; defaults to the tf-label `id` when omitted.
+- Fully toggleable via `enabled` — set `enabled = false` to create no resources at all (all outputs become `null`).
+- Exposes the security group `id`, `arn`, and `name` as outputs for wiring into rules and other modules.
+
+## Usage
+
+```hcl
+module "security_group" {
+  source = "git::https://github.com/PlatformStackPulse/tf-atom-security-group-aws.git?ref=v1.0.0"
+
+  # tf-label identity
+  namespace = "eg"
+  stage     = "prod"
+  name      = "app"
+
+  # required input
+  vpc_id = "vpc-0123456789abcdef0"
+
+  # optional
+  description = "Application tier security group"
+}
+```
 
 ## Module Documentation
 
@@ -68,3 +93,14 @@ Terraform atom: AWS Security Group - creates a network firewall for VPC resource
 | <a name="output_id"></a> [id](#output\_id) | ID of the security group |
 | <a name="output_name"></a> [name](#output\_name) | Name of the security group |
 <!-- END_TF_DOCS -->
+
+## Tests
+
+Unit tests live in [`tests/unit/`](tests/unit/) and use a `mock_provider "aws"`, so they run with no AWS credentials and make no real API calls.
+
+```bash
+terraform init -backend=false
+terraform test -test-directory=tests/unit
+```
+
+The suite validates that the security group is planned in the provided `vpc_id` when enabled, and that no resources are created (and outputs are `null`) when `enabled = false`.
